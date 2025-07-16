@@ -27,17 +27,17 @@ export default function TabLayout() {
         },
         tabBarShowLabel: false,
         tabBarStyle: {
-          position: "absolute",
-          bottom: 0,
-          left: 16,
-          right: 16,
-          height: 72,
-          elevation: 0,
+          height: 70,
           backgroundColor: theme.colors.background,
           borderRadius: 16,
-          alignItems: "center",
-          justifyContent: "center",
-          borderTopWidth: 0,
+          shadowColor: "#000",
+          shadowOffset: {
+            width: 0,
+            height: 4,
+          },
+          shadowOpacity: 0.1,
+          shadowRadius: 10,
+          elevation: 2,
         },
       }}
     >

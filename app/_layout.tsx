@@ -85,6 +85,21 @@ function RootLayoutNav() {
             headerBackTitle: "",
           }}
         />
+        <Stack.Screen
+          name="version"
+          options={{
+            title: "Tentang Aplikasi",
+            headerShown: true,
+            headerTitleAlign: "center",
+            headerStyle: headerStyles.noBorder,
+            headerTitleStyle: {
+              fontSize: 19,
+            },
+            headerShadowVisible: false,
+            headerTintColor: navigationTheme.colors.text,
+            headerBackTitle: "",
+          }}
+        />
         <Stack.Screen name="+not-found" />
       </Stack>
       <StatusBar style={theme === "dark" ? "light" : "dark"} />
