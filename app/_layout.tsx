@@ -100,6 +100,14 @@ function RootLayoutNav() {
             headerBackTitle: "",
           }}
         />
+        <Stack.Screen
+          name="appreciation"
+          options={{
+            title: "Apresiasi",
+            presentation: "modal",
+            headerShown: false,
+          }}
+        />
         <Stack.Screen name="+not-found" />
       </Stack>
       <StatusBar style={theme === "dark" ? "light" : "dark"} />

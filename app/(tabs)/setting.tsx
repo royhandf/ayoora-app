@@ -84,14 +84,16 @@ const SettingsScreen = () => {
               />
             </TouchableOpacity>
           </Link>
-          <TouchableOpacity>
-            <SettingItem
-              iconName="information-circle-outline"
-              title="App Version"
-              subtitle="Version 1.0.0"
-              styles={styles}
-            />
-          </TouchableOpacity>
+          <Link href="/version" asChild>
+            <TouchableOpacity>
+              <SettingItem
+                iconName="information-circle-outline"
+                title="Tentang Aplikasi"
+                subtitle="Versi dan informasi lainnya"
+                styles={styles}
+              />
+            </TouchableOpacity>
+          </Link>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -104,7 +106,7 @@ const getStyles = (theme: any) =>
       paddingHorizontal: 20,
     },
     section: {
-      marginBottom: 18,
+      marginBottom: 20,
     },
     sectionTitle: {
       color: theme.colors.text,
