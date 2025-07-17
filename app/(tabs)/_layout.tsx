@@ -70,7 +70,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="summary"
         options={{
-          title: "Summary",
+          title: "Ringkasan Mingguan",
           tabBarIcon: ({ focused }) => (
             <View
               style={{ alignItems: "center", paddingTop: 10, width: width / 5 }}
@@ -96,7 +96,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="add"
         options={{
-          title: "Add",
+          title: "Tambah Kegiatan",
           tabBarIcon: ({ focused }) => (
             <View
               style={{
@@ -117,7 +117,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="history"
         options={{
-          title: "History",
+          title: "Riwayat Kegiatan",
           tabBarIcon: ({ focused }) => (
             <View
               style={{ alignItems: "center", paddingTop: 10, width: width / 5 }}
