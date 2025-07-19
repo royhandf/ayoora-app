@@ -1,29 +1,24 @@
 {
   "expo": {
-    "name": "ayoora-app",
-    "slug": "ayoora-app",
+    "name": "Ayoora App",
+    "slug": "ayoora",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "ayooraapp",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.boedakoding.ayoora"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#1C1C1E"
       },
-      "package": "com.username.ayooraapp",
-      "edgeToEdgeEnabled": true,
+      "package": "com.boedakoding.ayoora",
+      "versionCode": 1,
       "usesCleartextTraffic": true
-    },
-    "web": {
-      "bundler": "metro",
-      "output": "static",
-      "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
       "expo-router",
@@ -38,8 +33,11 @@
       ],
       "expo-sqlite"
     ],
-    "experiments": {
-      "typedRoutes": true
-    }
+    "extra": {
+      "eas": {
+        "projectId": "b9c106b1-ebdf-45ab-83b6-70c8dd81fa2f"
+      }
+    },
+    "owner": "royhandf"
   }
 }
