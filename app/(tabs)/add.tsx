@@ -1,3 +1,4 @@
+import { addActivities } from "@/services/database";
 import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker, {
   DateTimePickerEvent,
@@ -6,6 +7,7 @@ import { useTheme } from "@react-navigation/native";
 import { router } from "expo-router";
 import React, { useMemo, useState } from "react";
 import {
+  Alert,
   Modal,
   Platform,
   SafeAreaView,
@@ -145,8 +147,42 @@ const AddScreen: React.FC = () => {
     (act) => act.id === editingActivityId
   );
 
-  const handleSave = () => {
-    router.push("/appreciation");
+  const handleSave = async () => {
+    const timeSet = new Set(activities.map((act) => act.waktu));
+    if (timeSet.size < activities.length) {
+      Alert.alert(
+        "Jadwal Bentrok",
+        "Anda memiliki beberapa kegiatan dengan waktu yang sama di dalam form. Harap perbaiki sebelum menyimpan."
+      );
+      return;
+    }
+
+    const today = new Date();
+    const formattedDate = `${today.getFullYear()}-${String(
+      today.getMonth() + 1
+    ).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+
+    const validActivities = activities
+      .filter((act) => act.kategori && act.waktu)
+      .map((act) => ({ ...act, tanggal: formattedDate }));
+
+    if (validActivities.length === 0) {
+      Alert.alert("Data Kosong", "Silakan isi setidaknya satu kegiatan.");
+      return;
+    }
+
+    try {
+      await addActivities(validActivities);
+
+      Alert.alert("Sukses", "Kegiatan berhasil disimpan!");
+      router.push("/appreciation");
+    } catch (error: any) {
+      console.error("Gagal menyimpan kegiatan:", error);
+      Alert.alert(
+        "Gagal Menyimpan",
+        error.message || "Terjadi kesalahan yang tidak diketahui."
+      );
+    }
   };
 
   return (

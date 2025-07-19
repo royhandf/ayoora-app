@@ -1,7 +1,9 @@
-import { useTheme } from "@react-navigation/native";
+import { Activity, getActivitiesForDate } from "@/services/database";
+import { useFocusEffect, useTheme } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
+  ActivityIndicator,
   ImageBackground,
   SafeAreaView,
   ScrollView,
@@ -11,21 +13,10 @@ import {
   View,
 } from "react-native";
 
-const INSPIRATIONAL_QUOTES = [
-  {
-    text: "Setiap hari adalah kesempatan baru untuk menjadi versi terbaik dari diri kita.",
-    author: "Maya Angelou",
-  },
-  {
-    text: "Satu-satunya cara untuk melakukan pekerjaan hebat adalah dengan mencintai apa yang Anda lakukan.",
-    author: "Steve Jobs",
-  },
-  {
-    text: "Percayalah Anda bisa dan Anda sudah setengah jalan.",
-    author: "Theodore Roosevelt",
-  },
-];
-
+interface ApiQuote {
+  content: string;
+  author: string;
+}
 const ActivityItem = ({
   title,
   time,
@@ -46,26 +37,51 @@ const ActivityItem = ({
 const HomeScreen = () => {
   const theme = useTheme();
   const styles = useMemo(() => getStyles(theme), [theme]);
-  const [currentQuote, setCurrentQuote] = useState(INSPIRATIONAL_QUOTES[0]);
+  const [currentQuote, setCurrentQuote] = useState<ApiQuote | null>(null);
+  const [isQuoteLoading, setIsQuoteLoading] = useState(true);
 
-  const getNewQuote = () => {
-    let newQuote;
-    do {
-      const randomIndex = Math.floor(
-        Math.random() * INSPIRATIONAL_QUOTES.length
+  const [todaysActivities, setTodaysActivities] = useState<Activity[]>([]);
+
+  const fetchNewQuote = useCallback(async () => {
+    setIsQuoteLoading(true);
+    try {
+      // Kita ambil kutipan dengan tag yang relevan: technology, success, wisdom
+      const response = await fetch(
+        "https://api.quotable.io/random?tags=technology|success|wisdom|inspirational"
       );
-      newQuote = INSPIRATIONAL_QUOTES[randomIndex];
-    } while (newQuote.text === currentQuote.text);
-    setCurrentQuote(newQuote);
-  };
-
-  useEffect(() => {
-    getNewQuote();
+      const data = await response.json();
+      setCurrentQuote({ content: data.content, author: data.author });
+    } catch (error) {
+      console.error("Gagal mengambil kutipan:", error);
+      setCurrentQuote({
+        content: "Kesempatan tidak terjadi, Anda yang membuatnya.",
+        author: "Chris Grosser",
+      });
+    } finally {
+      setIsQuoteLoading(false);
+    }
   }, []);
+
+  const loadTodaysActivities = useCallback(() => {
+    // ... (fungsi ini tetap sama)
+    const today = new Date();
+    const formattedDate = `${today.getFullYear()}-${String(
+      today.getMonth() + 1
+    ).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+    getActivitiesForDate(formattedDate)
+      .then(setTodaysActivities)
+      .catch((err) => console.error("Gagal mengambil kegiatan:", err));
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchNewQuote(); // Panggil fungsi API
+      loadTodaysActivities();
+    }, [fetchNewQuote, loadTodaysActivities]) // Tambahkan dependensi
+  );
 
   const imageUrl =
     "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop";
-
   const gradientColors = theme.dark
     ? (["rgba(50, 50, 50, 0.7)", "rgba(253, 177, 0, 0.7)"] as const)
     : (["rgba(253, 177, 0, 0.8)", "rgba(255, 126, 95, 0.8)"] as const);
@@ -91,16 +107,24 @@ const HomeScreen = () => {
                 end={{ x: 1, y: 1 }}
                 style={styles.gradientOverlay}
               >
-                <Text style={styles.quoteText}>
-                  &quot;{currentQuote.text}&quot;
-                </Text>
-                <Text style={styles.authorText}>- {currentQuote.author}</Text>
-                <TouchableOpacity
-                  style={styles.newQuoteButton}
-                  onPress={getNewQuote}
-                >
-                  <Text style={styles.newQuoteButtonText}>Quote Baru</Text>
-                </TouchableOpacity>
+                {isQuoteLoading ? (
+                  <ActivityIndicator size="large" color="#FFFFFF" />
+                ) : (
+                  <>
+                    <Text style={styles.quoteText}>
+                      &quot;{currentQuote?.content}&quot;
+                    </Text>
+                    <Text style={styles.authorText}>
+                      - {currentQuote?.author}
+                    </Text>
+                    <TouchableOpacity
+                      style={styles.newQuoteButton}
+                      onPress={fetchNewQuote}
+                    >
+                      <Text style={styles.newQuoteButtonText}>Quote Baru</Text>
+                    </TouchableOpacity>
+                  </>
+                )}
               </LinearGradient>
             </ImageBackground>
           </View>
@@ -108,8 +132,25 @@ const HomeScreen = () => {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Kegiatan Hari Ini</Text>
-          <ActivityItem title="Meditasi Pagi" time="07:00" styles={styles} />
-          <ActivityItem title="Menulis Jurnal" time="08:00" styles={styles} />
+          {todaysActivities.length > 0 ? (
+            todaysActivities.map((activity) => (
+              <ActivityItem
+                key={activity.id}
+                title={activity.kategori}
+                time={activity.waktu}
+                styles={styles}
+              />
+            ))
+          ) : (
+            <View style={styles.emptyStateContainer}>
+              <Text style={styles.emptyStateText}>
+                Belum ada kegiatan tercatat hari ini.
+              </Text>
+              <Text style={styles.emptyStateSubtext}>
+                Tekan tombol &quot;+&quot; untuk mencatat kegiatan baru.
+              </Text>
+            </View>
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -182,6 +223,24 @@ const getStyles = (theme: any) =>
       fontWeight: "bold",
     },
     activityTime: { color: "gray", fontSize: 14, marginTop: 4 },
+    // Style untuk pesan saat tidak ada kegiatan
+    emptyStateContainer: {
+      backgroundColor: theme.colors.card,
+      borderRadius: 12,
+      padding: 20,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    emptyStateText: {
+      color: theme.colors.text,
+      fontSize: 16,
+      fontWeight: "500",
+    },
+    emptyStateSubtext: {
+      color: "gray",
+      fontSize: 14,
+      marginTop: 8,
+    },
   });
 
 export default HomeScreen;

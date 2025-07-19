@@ -1,7 +1,15 @@
+// File: (tabs)/history.tsx atau di mana pun HistoryScreen berada
+
+import {
+  Activity,
+  getActivitiesForDate,
+  getFirstActivityDate,
+} from "@/services/database";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "@react-navigation/native";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
+  ActivityIndicator,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -10,23 +18,7 @@ import {
   View,
 } from "react-native";
 
-type Activity = {
-  title: string;
-  time: string;
-};
-const DUMMY_ACTIVITIES: { [key: string]: Activity[] } = {
-  "2024-05-05": [
-    { title: "Morning Meditation", time: "09:00" },
-    { title: "Light Exercise", time: "10:00" },
-    { title: "Healthy Lunch", time: "12:00" },
-  ],
-  "2024-05-10": [
-    { title: "Team Meeting", time: "10:00" },
-    { title: "Project Brainstorming", time: "11:00" },
-  ],
-  "2024-05-15": [{ title: "Reading a Book", time: "20:00" }],
-};
-
+// Komponen ActivityHistoryItem tetap sama
 const ActivityHistoryItem = ({
   title,
   time,
@@ -48,8 +40,51 @@ const HistoryScreen: React.FC = () => {
   const theme = useTheme();
   const styles = useMemo(() => getStyles(theme), [theme]);
 
-  const [currentDate, setCurrentDate] = useState(new Date("2024-05-01"));
-  const [selectedDate, setSelectedDate] = useState(new Date("2024-05-15"));
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // State untuk menyimpan batas navigasi kalender
+  const [firstActivityDate, setFirstActivityDate] = useState<Date | null>(null);
+
+  // useEffect untuk mengambil data kegiatan berdasarkan tanggal yang dipilih
+  useEffect(() => {
+    const fetchActivities = async () => {
+      const year = selectedDate.getFullYear();
+      const month = String(selectedDate.getMonth() + 1).padStart(2, "0");
+      const day = String(selectedDate.getDate()).padStart(2, "0");
+      const selectedDateString = `${year}-${month}-${day}`;
+
+      try {
+        const data = await getActivitiesForDate(selectedDateString);
+        setActivities(data);
+      } catch (error) {
+        console.error("Gagal mengambil kegiatan:", error);
+      }
+    };
+
+    fetchActivities();
+  }, [selectedDate]);
+
+  // useEffect untuk mengambil tanggal pertama saat komponen dimuat
+  useEffect(() => {
+    const fetchBoundaries = async () => {
+      try {
+        const firstDateStr = await getFirstActivityDate();
+        if (firstDateStr) {
+          // Konversi YYYY-MM-DD ke objek Date dengan aman
+          const [year, month, day] = firstDateStr.split("-").map(Number);
+          setFirstActivityDate(new Date(year, month - 1, day));
+        }
+      } catch (error) {
+        console.error("Gagal mengambil tanggal pertama:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchBoundaries();
+  }, []);
 
   const changeMonth = (amount: number) => {
     setCurrentDate((prev) => {
@@ -59,7 +94,34 @@ const HistoryScreen: React.FC = () => {
     });
   };
 
+  // Logika untuk menonaktifkan tombol navigasi
+  const canGoBack = useMemo(() => {
+    if (!firstActivityDate) return true; // Jika tidak ada data, izinkan navigasi
+    const firstMonth = new Date(
+      firstActivityDate.getFullYear(),
+      firstActivityDate.getMonth(),
+      1
+    );
+    const currentMonth = new Date(
+      currentDate.getFullYear(),
+      currentDate.getMonth(),
+      1
+    );
+    return currentMonth > firstMonth;
+  }, [currentDate, firstActivityDate]);
+
+  const canGoForward = useMemo(() => {
+    const today = new Date();
+    const nextMonth = new Date(
+      currentDate.getFullYear(),
+      currentDate.getMonth() + 1,
+      1
+    );
+    return nextMonth <= new Date(today.getFullYear(), today.getMonth() + 1, 1);
+  }, [currentDate]);
+
   const renderCalendar = () => {
+    // ... (logika render kalender tetap sama)
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
     const firstDayOfMonth = new Date(year, month, 1).getDay();
@@ -89,35 +151,49 @@ const HistoryScreen: React.FC = () => {
     return (
       <View style={styles.calendarContainer}>
         <View style={styles.calendarHeader}>
-          <TouchableOpacity onPress={() => changeMonth(-1)}>
-            <Ionicons name="chevron-back" size={24} color={theme.colors.text} />
+          <TouchableOpacity
+            onPress={() => canGoBack && changeMonth(-1)}
+            disabled={!canGoBack}
+          >
+            <Ionicons
+              name="chevron-back"
+              size={24}
+              color={canGoBack ? theme.colors.text : "gray"}
+            />
           </TouchableOpacity>
           <Text style={styles.calendarMonth}>{`${monthName} ${year}`}</Text>
-          <TouchableOpacity onPress={() => changeMonth(1)}>
+          <TouchableOpacity
+            onPress={() => canGoForward && changeMonth(1)}
+            disabled={!canGoForward}
+          >
             <Ionicons
               name="chevron-forward"
               size={24}
-              color={theme.colors.text}
+              color={canGoForward ? theme.colors.text : "gray"}
             />
           </TouchableOpacity>
         </View>
         <View style={styles.weekDays}>
-          {["S", "M", "T", "W", "T", "F", "S"].map((day, index) => (
-            <Text key={day + index} style={styles.weekDayText}>
-              {day}
-            </Text>
-          ))}
+          {["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"].map(
+            (day, index) => (
+              <Text key={day + index} style={styles.weekDayText}>
+                {day.slice(0, 1)}
+              </Text>
+            )
+          )}
         </View>
         <View style={styles.daysGrid}>{days}</View>
       </View>
     );
   };
 
-  const year = selectedDate.getFullYear();
-  const month = String(selectedDate.getMonth() + 1).padStart(2, "0");
-  const day = String(selectedDate.getDate()).padStart(2, "0");
-  const selectedDateString = `${year}-${month}-${day}`;
-  const activitiesForSelectedDate = DUMMY_ACTIVITIES[selectedDateString] || [];
+  if (isLoading) {
+    return (
+      <View style={styles.centeredLoader}>
+        <ActivityIndicator size="large" color="#FDB100" />
+      </View>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -129,18 +205,18 @@ const HistoryScreen: React.FC = () => {
         {renderCalendar()}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Kegiatan</Text>
-          {activitiesForSelectedDate.length > 0 ? (
-            activitiesForSelectedDate.map((activity) => (
+          {activities.length > 0 ? (
+            activities.map((activity) => (
               <ActivityHistoryItem
-                key={activity.title + activity.time}
-                title={activity.title}
-                time={activity.time}
+                key={activity.id}
+                title={activity.kategori}
+                time={activity.waktu}
                 styles={styles}
               />
             ))
           ) : (
             <Text style={styles.noActivityText}>
-              No activities recorded for this day.
+              Tidak ada kegiatan tercatat pada tanggal ini.
             </Text>
           )}
         </View>
@@ -151,6 +227,7 @@ const HistoryScreen: React.FC = () => {
 
 const getStyles = (theme: any) =>
   StyleSheet.create({
+    // ... (semua style lain tetap sama)
     safeArea: { flex: 1, backgroundColor: theme.colors.background },
     container: { paddingHorizontal: 20 },
     section: { marginTop: 20 },
@@ -231,6 +308,7 @@ const getStyles = (theme: any) =>
       marginTop: 20,
       fontSize: 16,
     },
+    centeredLoader: { flex: 1, justifyContent: "center", alignItems: "center" },
   });
 
 export default HistoryScreen;

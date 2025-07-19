@@ -1,51 +1,44 @@
+import { getWeeklySummary } from "@/services/database";
 import { Ionicons } from "@expo/vector-icons";
-import { useTheme } from "@react-navigation/native";
-import React, { useMemo, useState } from "react";
+import { useFocusEffect, useTheme } from "@react-navigation/native";
+import React, { useCallback, useMemo, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   SafeAreaView,
   ScrollView,
-  Share, // 1. Import Share API
+  Share,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
 
-// --- DATA DUMMY & TIPE (Tidak ada perubahan) ---
 type WeeklyActivity = {
   day: string;
   count: number;
 };
-const WEEKLY_DATA: WeeklyActivity[] = [
-  { day: "Senin", count: 8 },
-  { day: "Selasa", count: 2 },
-  { day: "Rabu", count: 5 },
-  { day: "Kamis", count: 9 },
-  { day: "Jumat", count: 10 },
-  { day: "Sabtu", count: 9 },
-  { day: "Minggu", count: 8 },
-];
-const maxValue = Math.max(...WEEKLY_DATA.map((d) => d.count), 1);
+
 const MOTIVATIONAL_QUOTE =
   "The only way to do great work is to love what you do. If you haven't found it yet, keep looking. Don't settle.";
 
-// --- KOMPONEN KECIL (Tidak ada perubahan) ---
 const BarChart = ({
   data,
   styles,
   selectedDay,
   onSelectDay,
+  maxValue,
 }: {
   data: WeeklyActivity[];
   styles: any;
   selectedDay: string | null;
   onSelectDay: (day: string) => void;
+  maxValue: number;
 }) => (
   <View style={styles.barChartContainer}>
     {data.map((item) => {
       const isSelected = selectedDay === item.day;
-      const barHeight = (item.count / maxValue) * 100;
+      const barHeight = maxValue > 0 ? (item.count / maxValue) * 100 : 0;
       return (
         <TouchableOpacity
           key={item.day}
@@ -76,42 +69,62 @@ const BarChart = ({
   </View>
 );
 
-// --- KOMPONEN UTAMA ---
 const SummaryScreen: React.FC = () => {
   const theme = useTheme();
   const styles = useMemo(() => getStyles(theme), [theme]);
-  const [selectedDay, setSelectedDay] = useState<string | null>("Wed");
 
-  // 2. Perbarui fungsi onShare
+  const [weeklyData, setWeeklyData] = useState<WeeklyActivity[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedDay, setSelectedDay] = useState<string | null>(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      const fetchSummary = async () => {
+        try {
+          setIsLoading(true);
+          const summaryData = await getWeeklySummary();
+          setWeeklyData(summaryData);
+        } catch (error) {
+          console.error("Gagal memuat ringkasan mingguan:", error);
+          Alert.alert("Error", "Gagal memuat data ringkasan.");
+        } finally {
+          setIsLoading(false);
+        }
+      };
+
+      fetchSummary();
+    }, [])
+  );
+
+  const totalActivities = useMemo(
+    () => weeklyData.reduce((sum, item) => sum + item.count, 0),
+    [weeklyData]
+  );
+  const maxValue = useMemo(
+    () => Math.max(...weeklyData.map((d) => d.count), 1),
+    [weeklyData]
+  );
+
   const onShare = async () => {
     try {
-      // Siapkan pesan yang akan dibagikan
-      const messageToShare = `My Weekly Summary on Ayoora:\n\n- Total Activities: ${WEEKLY_DATA.reduce(
-        (sum, item) => sum + item.count,
-        0
-      )}\n- Motivation: "${MOTIVATIONAL_QUOTE}"\n\nGet productive with Ayoora!`;
-
-      const result = await Share.share({
+      const messageToShare = `Ringkasan Mingguan Saya di Ayoora:\n\n- Total Kegiatan: ${totalActivities}\n- Motivasi: "${MOTIVATIONAL_QUOTE}"\n\nJadilah produktif bersama Ayoora!`;
+      await Share.share({
         message: messageToShare,
-        title: "Ayoora Weekly Summary", // Opsional, untuk subjek email
+        title: "Ayoora Weekly Summary",
       });
-
-      if (result.action === Share.sharedAction) {
-        if (result.activityType) {
-          // dibagikan dengan activity type
-          console.log("Shared with activity type:", result.activityType);
-        } else {
-          // dibagikan
-          console.log("Shared successfully");
-        }
-      } else if (result.action === Share.dismissedAction) {
-        // dibatalkan
-        console.log("Share dismissed");
-      }
     } catch (error: any) {
       Alert.alert(error.message);
     }
   };
+
+  if (isLoading) {
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" color="#FDB100" />
+        <Text style={styles.loadingText}>Memuat Ringkasan...</Text>
+      </View>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -122,17 +135,16 @@ const SummaryScreen: React.FC = () => {
       >
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Aktivitas Minggu Ini</Text>
-          <Text style={styles.largeNumber}>
-            {WEEKLY_DATA.reduce((sum, item) => sum + item.count, 0)}
-          </Text>
+          <Text style={styles.largeNumber}>{totalActivities}</Text>
           <Text style={styles.subtitle}>7 Hari Terakhir</Text>
           <BarChart
-            data={WEEKLY_DATA}
+            data={weeklyData}
             styles={styles}
             selectedDay={selectedDay}
             onSelectDay={(day) =>
               setSelectedDay(day === selectedDay ? null : day)
             }
+            maxValue={maxValue}
           />
         </View>
 
@@ -154,7 +166,6 @@ const SummaryScreen: React.FC = () => {
   );
 };
 
-// --- STYLESHEET (Tidak ada perubahan) ---
 const getStyles = (theme: any) =>
   StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: theme.colors.background },
@@ -228,6 +239,17 @@ const getStyles = (theme: any) =>
       fontSize: 16,
       fontWeight: "bold",
       marginLeft: 8,
+    },
+    centered: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      backgroundColor: theme.colors.background,
+    },
+    loadingText: {
+      marginTop: 10,
+      fontSize: 16,
+      color: theme.colors.text,
     },
   });
 
