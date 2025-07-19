@@ -223,7 +223,6 @@ const getStyles = (theme: any) =>
       fontWeight: "bold",
     },
     activityTime: { color: "gray", fontSize: 14, marginTop: 4 },
-    // Style untuk pesan saat tidak ada kegiatan
     emptyStateContainer: {
       backgroundColor: theme.colors.card,
       borderRadius: 12,
@@ -240,6 +239,7 @@ const getStyles = (theme: any) =>
       color: "gray",
       fontSize: 14,
       marginTop: 8,
+      textAlign: "center",
     },
   });
 

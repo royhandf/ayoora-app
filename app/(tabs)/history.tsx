@@ -305,8 +305,12 @@ const getStyles = (theme: any) =>
     noActivityText: {
       textAlign: "center",
       color: "gray",
-      marginTop: 20,
       fontSize: 16,
+      backgroundColor: theme.colors.card,
+      borderRadius: 12,
+      padding: 20,
+      alignItems: "center",
+      justifyContent: "center",
     },
     centeredLoader: { flex: 1, justifyContent: "center", alignItems: "center" },
   });
