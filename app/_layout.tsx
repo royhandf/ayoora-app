@@ -1,3 +1,4 @@
+import { initDB } from "@/services/database";
 import {
   DarkTheme as NavigationDarkTheme,
   DefaultTheme as NavigationDefaultTheme,
@@ -7,7 +8,7 @@ import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { StyleSheet } from "react-native";
 import "react-native-reanimated";
 import { CustomThemeProvider, useAppTheme } from "../context/ThemeProvider";
@@ -24,7 +25,6 @@ const MyLightTheme = {
     border: "#D1D1D6",
   },
 };
-
 const MyDarkTheme = {
   ...NavigationDarkTheme,
   colors: {
@@ -62,9 +62,7 @@ function RootLayoutNav() {
             headerShown: true,
             headerTitleAlign: "center",
             headerStyle: headerStyles.noBorder,
-            headerTitleStyle: {
-              fontSize: 19,
-            },
+            headerTitleStyle: { fontSize: 19 },
             headerShadowVisible: false,
             headerTintColor: navigationTheme.colors.text,
             headerBackTitle: "",
@@ -77,9 +75,7 @@ function RootLayoutNav() {
             headerShown: true,
             headerTitleAlign: "center",
             headerStyle: headerStyles.noBorder,
-            headerTitleStyle: {
-              fontSize: 19,
-            },
+            headerTitleStyle: { fontSize: 19 },
             headerShadowVisible: false,
             headerTintColor: navigationTheme.colors.text,
             headerBackTitle: "",
@@ -92,9 +88,7 @@ function RootLayoutNav() {
             headerShown: true,
             headerTitleAlign: "center",
             headerStyle: headerStyles.noBorder,
-            headerTitleStyle: {
-              fontSize: 19,
-            },
+            headerTitleStyle: { fontSize: 19 },
             headerShadowVisible: false,
             headerTintColor: navigationTheme.colors.text,
             headerBackTitle: "",
@@ -116,17 +110,33 @@ function RootLayoutNav() {
 }
 
 export default function RootLayout() {
-  const [loaded, error] = useFonts({
+  const [fontsLoaded, fontError] = useFonts({
     SplineSans: require("../assets/fonts/SplineSans-Regular.ttf"),
   });
 
+  const [isDbReady, setDbReady] = useState(false);
+
   useEffect(() => {
-    if (loaded || error) {
+    const setup = async () => {
+      try {
+        await initDB();
+        console.log("✅ Database initialized successfully");
+        setDbReady(true);
+      } catch (e) {
+        console.error("❌ Database init failed:", e);
+      }
+    };
+
+    setup();
+  }, []);
+
+  useEffect(() => {
+    if (fontsLoaded && isDbReady) {
       SplashScreen.hideAsync();
     }
-  }, [loaded, error]);
+  }, [fontsLoaded, isDbReady]);
 
-  if (!loaded && !error) {
+  if (!fontsLoaded || !isDbReady || fontError) {
     return null;
   }
 
